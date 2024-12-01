@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beautiful Book-Style Todo Lists with Authentication</title>
+    <style>
+        :root {
+            --primary-color: #f59e0b;
+            --secondary-color: #fbbf24;
+            --background-color: #fffbeb;
+            --text-color: #78350f;
+            --delete-color: #ef4444;
+        }
+
+        .dark-mode {
+            --primary-color: #fbbf24;
+            --secondary-color: #f59e0b;
+            --background-color: #1f2937;
+            --text-color: #f3f4f6;
+            --delete-color: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--text-color);
+            font-size: 2.5rem;
+        }
+
+        .lists-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .todo-list {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transform: rotate(1deg);
+            transition: transform 0.3s ease, background-color 0.3s ease;
+        }
+
+        .dark-mode .todo-list {
+            background-color: #374151;
+        }
+
+        .todo-list:hover {
+            transform: rotate(0deg);
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .list-title {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .todo-form {
+            display: flex;
+            margin-bottom: 15px;
+        }
+
+        .todo-input {
+            flex-grow: 1;
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 5px 0 0 5px;
+            outline: none;
+        }
+
+        .todo-submit {
+            padding: 8px 15px;
+            font-size: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .todo-submit:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .todo-items {
+            list-style-type: none;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .todo-checkbox {
+            margin-right: 10px;
+        }
+
+        .todo-text {
+            flex-grow: 1;
+            font-size: 14px;
+        }
+
+        .todo-delete, .list-delete {
+            background-color: transparent;
+            color: var(--delete-color);
+            border: none;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .todo-delete:hover, .list-delete:hover {
+            color: #b91c1c;
+        }
+
+        .completed {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+
+        .add-list-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 2rem;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .add-list-button:hover {
+            background-color: var(--secondary-color);
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode .modal-content {
+            background-color: #374151;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        #new-list-input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        #create-list-button {
+            width: 100%;
+            padding: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #create-list-button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        #login-container {
+            max-width: 300px;
+            margin: 50px auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode #login-container {
+            background-color: #374151;
+        }
+
+        #login-form input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        #login-form button {
+            width: 100%;
+            padding: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #login-form button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        #logout-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 15px;
+            background-color: var(--delete-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #logout-button:hover {
+            background-color: #b91c1c;
+        }
+
+        #settings-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 8px 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #settings-button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        #settings-modal {
+            display: none;
+            position: fixed;
+            z-index: 2;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        #settings-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode #settings-content {
+            background-color: #374151;
+        }
+
+        #settings-content h2 {
+            margin-bottom: 15px;
+        }
+
+        #settings-content button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #settings-content button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        #dark-mode-toggle {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        #dark-mode-toggle label {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-container">
+        <h2>Login</h2>
+        <form id="login-form">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+    <div id="app-container" style="display: none;">
+        <button id="settings-button">Settings</button>
+        <button id="logout-button">Logout</button>
+        <div class="container">
+            <h1>Beautiful Book-Style Todo Lists</h1>
+            <div id="lists-container" class="lists-container"></div>
+        </div>
+
+        <button id="add-list-button" class="add-list-button" aria-label="Add new list">+</button>
+
+        <div id="new-list-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Create New List</h2>
+                <input type="text" id="new-list-input" placeholder="Enter list name">
+                <button id="create-list-button">Create List</button>
+            </div>
+        </div>
+
+        <div id="settings-modal">
+            <div id="settings-content">
+                <h2>Settings</h2>
+                <div id="dark-mode-toggle">
+                    <input type="checkbox" id="dark-mode-checkbox">
+                    <label for="dark-mode-checkbox">Dark Mode</label>
+                </div>
+                <button id="download-lists">Download Todo Lists</button>
+                <button id="upload-lists">Upload Todo Lists</button>
+                <input type="file" id="file-input" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const loginContainer = document.getElementById('login-container');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const logoutButton = document.getElementById('logout-button');
+        const listsContainer = document.getElementById('lists-container');
+        const addListButton = document.getElementById('add-list-button');
+        const newListModal = document.getElementById('new-list-modal');
+        const newListInput = document.getElementById('new-list-input');
+        const createListButton = document.getElementById('create-list-button');
+        const closeModalButton = document.querySelector('.close');
+        const settingsButton = document.getElementById('settings-button');
+        const settingsModal = document.getElementById('settings-modal');
+        const darkModeCheckbox = document.getElementById('dark-mode-checkbox');
+        const downloadListsButton = document.getElementById('download-lists');
+        const uploadListsButton = document.getElementById('upload-lists');
+        const fileInput = document.getElementById('file-input');
+
+        let lists = [];
+        let currentUser = null;
+
+        function saveLists() {
+            localStorage.setItem(`todo-lists-${currentUser}`, JSON.stringify(lists));
+        }
+
+        function loadLists() {
+            lists = JSON.parse(localStorage.getItem(`todo-lists-${currentUser}`)) || [];
+        }
+
+        function createNewList(name) {
+            const list = {
+                id: Date.now().toString(),
+                name: name,
+                todos: []
+            };
+            lists.push(list);
+            saveLists();
+            renderLists();
+        }
+
+        function createTodoItem(listId, todoText) {
+            const list = lists.find(list => list.id === listId);
+            if (list) {
+                const todo = {
+                    id: Date.now().toString(),
+                    text: todoText,
+                    completed: false
+                };
+                list.todos.push(todo);
+                saveLists();
+                renderLists();
+            }
+        }
+
+        function toggleTodoCompleted(listId, todoId) {
+            const list = lists.find(list => list.id === listId);
+            if (list) {
+                const todo = list.todos.find(todo => todo.id === todoId);
+                if (todo) {
+                    todo.completed = !todo.completed;
+                    saveLists();
+                    renderLists();
+                }
+            }
+        }
+
+        function deleteTodo(listId, todoId) {
+            const list = lists.find(list => list.id === listId);
+            if (list) {
+                list.todos = list.todos.filter(todo => todo.id !== todoId);
+                saveLists();
+                renderLists();
+            }
+        }
+
+        function deleteList(listId) {
+            lists = lists.filter(list => list.id !== listId);
+            saveLists();
+            renderLists();
+        }
+
+        function renderLists() {
+            listsContainer.innerHTML = '';
+            lists.forEach(list => {
+                const listElement = document.createElement('div');
+                listElement.classList.add('todo-list');
+                listElement.innerHTML = `
+                    <div class="list-header">
+                        <h2 class="list-title">${list.name}</h2>
+                        <button class="list-delete" data-list-id="${list.id}" aria-label="Delete list">&times;</button>
+                    </div>
+                    <form class="todo-form" data-list-id="${list.id}">
+                        <input type="text" class="todo-input" placeholder="Add a new task" required>
+                        <button type="submit" class="todo-submit">Add</button>
+                    </form>
+                    <ul class="todo-items"></ul>
+                `;
+
+                const todoItems = listElement.querySelector('.todo-items');
+                list.todos.forEach(todo => {
+                    const todoItem = document.createElement('li');
+                    todoItem.classList.add('todo-item');
+                    todoItem.innerHTML = `
+                        <input type="checkbox" class="todo-checkbox" data-list-id="${list.id}" data-todo-id="${todo.id}" ${todo.completed ? 'checked' : ''}>
+                        <span class="todo-text ${todo.completed ? 'completed' : ''}">${todo.text}</span>
+                        <button class="todo-delete" data-list-id="${list.id}" data-todo-id="${todo.id}" aria-label="Delete todo">&times;</button>
+                    `;
+                    todoItems.appendChild(todoItem);
+                });
+
+                listsContainer.appendChild(listElement);
+            });
+        }
+
+        function setCookie(name, value, days) {
+            const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
+            document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+        }
+
+        function getCookie(name) {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [cookieName, cookieValue] = cookie.trim().split('=');
+                if (cookieName === name) {
+                    return decodeURIComponent(cookieValue);
+                }
+            }
+            return null;
+        }
+
+        function deleteCookie(name) {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        }
+
+        function login(username, password) {
+            if (username && password) {
+                currentUser = username;
+                setCookie('username', username, 7);
+                loadLists();
+                renderLists();
+                loginContainer.style.display = 'none';
+                appContainer.style.display = 'block';
+            } else {
+                alert('Invalid username or password');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            deleteCookie('username');
+            lists = [];
+            loginContainer.style.display = 'block';
+            appContainer.style.display = 'none';
+        }
+
+        function checkAuth() {
+            const username = getCookie('username');
+            if (username) {
+                login(username, 'password');
+            }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        function downloadLists() {
+            const dataStr = JSON.stringify(lists);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = 'todo-lists.json';
+
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        function uploadLists(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const uploadedLists = JSON.parse(e.target.result);
+                        lists = uploadedLists;
+                        saveLists();
+                        renderLists();
+                        alert('Todo lists uploaded successfully!');
+                    } catch (error) {
+                        alert('Error uploading todo lists. Please make sure the file is valid JSON.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            login(username, password);
+        });
+
+        logoutButton.addEventListener('click', logout);
+
+        listsContainer.addEventListener('submit', e => {
+            if (e.target.classList.contains('todo-form')) {
+                e.preventDefault();
+                const listId = e.target.dataset.listId;
+                const todoInput = e.target.querySelector('.todo-input');
+                const todoText = todoInput.value.trim();
+                if (todoText) {
+                    createTodoItem(listId, todoText);
+                    todoInput.value = '';
+                }
+            }
+        });
+
+        listsContainer.addEventListener('click', e => {
+            if (e.target.classList.contains('todo-checkbox')) {
+                const listId = e.target.dataset.listId;
+                const todoId = e.target.dataset.todoId;
+                toggleTodoCompleted(listId, todoId);
+            } else if (e.target.classList.contains('todo-delete')) {
+                const listId = e.target.dataset.listId;
+                const todoId = e.target.dataset.todoId;
+                deleteTodo(listId, todoId);
+            } else if (e.target.classList.contains('list-delete')) {
+                const listId = e.target.dataset.listId;
+                deleteList(listId);
+            }
+        });
+
+        addListButton.addEventListener('click', () => {
+            newListModal.style.display = 'block';
+        });
+
+        closeModalButton.addEventListener('click', () => {
+            newListModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target === newListModal) {
+                newListModal.style.display = 'none';
+            }
+            if (e.target === settingsModal) {
+                settingsModal.style.display = 'none';
+            }
+        });
+
+        createListButton.addEventListener('click', () => {
+            const listName = newListInput.value.trim();
+            if (listName) {
+                createNewList(listName);
+                newListInput.value = '';
+                newListModal.style.display = 'none';
+            }
+        });
+
+        settingsButton.addEventListener('click', () => {
+            settingsModal.style.display = 'block';
+        });
+
+        darkModeCheckbox.addEventListener('change', toggleDarkMode);
+
+        downloadListsButton.addEventListener('click', downloadLists);
+
+        uploadListsButton.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', uploadLists);
+
+        // Check authentication on page load
+        checkAuth();
+
+        // Check and apply dark mode setting
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            darkModeCheckbox.checked = true;
+        }
+    </script>
+</body>
+</html>
